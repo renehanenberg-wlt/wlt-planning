@@ -282,7 +282,7 @@ function actBtns(t,ds){
   const peNaam=projKey?PE_NAAM[projKey]:(t.proj||'');
   const peTel=projKey?PE_TEL[projKey]:'';
   const subj=encodeURIComponent(t.ordernr+' - '+t.klant+' - '+taakNm+' - '+emp);
-  const to=PLANNING_EMAIL+(peEmail?','+peEmail:'');
+  const to=PLANNING_EMAIL+(peEmail?';'+peEmail:'');
   const body=encodeURIComponent(
     'Beste '+(peNaam?peNaam+' en ':'')+'planning,\n\n'+
     'De volgende activiteit is gereed:\n\n'+
