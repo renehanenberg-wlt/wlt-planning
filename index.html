@@ -238,6 +238,9 @@ async function syncNow(){
       Object.entries(d.engineers||{}).forEach(([k,v])=>{
         PE_TEL[k]=v.tel||'';PE_EMAIL[k]=v.email||'';PE_NAAM[k]=v.naam||k;
       });
+      // Herrender de planning nu de engineer-gegevens beschikbaar zijn
+      const savedEmp=localStorage.getItem('wlt_emp');
+      if(savedEmp&&typeof renderPlan==='function')renderPlan(savedEmp);
     }).catch(()=>{});
     afterLoad(false);
   }catch(e){
