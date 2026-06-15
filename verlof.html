@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="WLT Verlof">
+<title>WLT Verlofaanvraag</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --steel:#1a2740;--steel-mid:#2a3f60;--accent:#e8a020;
+  --bg:#f0f2f5;--card:#fff;--text:#1a2740;--muted:#6b7a92;--border:#d8dde6;
+  --green:#16a34a;--red:#dc2626;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--steel) 0%,var(--steel-mid) 100%);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,39,64,.3)}
+.hdr-top{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--steel);flex-shrink:0;overflow:hidden}
+.logo img{width:34px;height:34px;object-fit:contain;border-radius:8px}
+.hdr-titles{flex:1}
+.hdr-title{font-size:17px;font-weight:700}
+.hdr-sub{font-size:11px;opacity:.6;margin-top:1px}
+.back-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:8px;color:#fff;font-size:13px;font-weight:600;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.back-btn:active{background:rgba(255,255,255,.25)}
+
+/* CONTENT */
+.wrap{padding:20px 16px 40px;max-width:540px;margin:0 auto}
+
+/* INFO CARD */
+.info-card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid var(--accent)}
+.info-title{font-size:13px;font-weight:700;color:var(--steel);margin-bottom:4px}
+.info-sub{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* FORM */
+.form-card{background:var(--card);border-radius:12px;padding:20px 16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.field{margin-bottom:18px}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+input,select,textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit;color:var(--text);background:#fff;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--steel)}
+textarea{min-height:90px;resize:vertical;line-height:1.5}
+.date-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field-hint{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* DAGENTELLER */
+.days-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px;font-weight:600;color:var(--steel)}
+.days-num{font-size:20px;font-weight:800;color:var(--accent);line-height:1}
+
+/* SUBMIT */
+.submit-btn{width:100%;background:var(--green);color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;transition:background .15s}
+.submit-btn:active{background:#15803d}
+.submit-btn:disabled{background:#94a3b8;cursor:not-allowed}
+
+/* PREVIEW */
+.preview{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;margin-top:16px;display:none}
+.preview-title{font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.preview-row{display:flex;gap:8px;font-size:13px;margin-bottom:6px;line-height:1.4}
+.preview-lbl{color:var(--muted);min-width:90px;flex-shrink:0}
+.preview-val{font-weight:500;color:var(--text)}
+
+/* SUCCESS */
+.success{display:none;text-align:center;padding:40px 20px}
+.success-icon{font-size:56px;margin-bottom:16px}
+.success-title{font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.again-btn{background:var(--steel);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="logo" id="logoWrap">WLT</div>
+    <div class="hdr-titles">
+      <div class="hdr-title">Verlofaanvraag</div>
+      <div class="hdr-sub">WLT Liquid &amp; Gas Loading Technology</div>
+    </div>
+    <a class="back-btn" href="index.html">&#8592; Planning</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="info-card">
+    <div class="info-title">&#128197; Verlof aanvragen</div>
+    <div class="info-sub">Vul het formulier in en tik op "Verstuur aanvraag". Je eigen mailapp opent met een kant-en-klare mail naar planning.</div>
+  </div>
+
+  <div class="form-card" id="formCard">
+
+    <div class="field">
+      <label>Jouw naam</label>
+      <input type="text" id="fNaam" placeholder="Voornaam Achternaam" autocomplete="name">
+    </div>
+
+    <div class="field">
+      <label>Type verlof</label>
+      <select id="fType">
+        <option value="Vakantieverlof">🏖️ Vakantieverlof</option>
+        <option value="Bijzonder verlof">⭐ Bijzonder verlof</option>
+        <option value="Overig verlof">📝 Overig verlof</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Periode</label>
+      <div class="date-row">
+        <div>
+          <input type="date" id="fVan" oninput="bereken()">
+          <div class="field-hint">Eerste verlofdag</div>
+        </div>
+        <div>
+          <input type="date" id="fTot" oninput="bereken()">
+          <div class="field-hint">Laatste verlofdag</div>
+        </div>
+      </div>
+      <div class="days-badge" id="daysBadge" style="display:none">
+        <span class="days-num" id="daysNum">0</span>
+        <span>werkdagen</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Toelichting <span style="font-weight:400;text-transform:none;letter-spacing:0">(optioneel)</span></label>
+      <textarea id="fToel" placeholder="Bijv. familiebezoek, medische afspraak..."></textarea>
+    </div>
+
+
+
+    <div class="preview" id="preview">
+      <div class="preview-title">&#10003; Overzicht aanvraag</div>
+      <div class="preview-row"><span class="preview-lbl">Naam</span><span class="preview-val" id="pvNaam"></span></div>
+      <div class="preview-row"><span class="preview-lbl">Type</span><span class="preview-val" id="pvType"></span></div>
+      <div class="preview-row"><span class="preview-lbl">Van</span><span class="preview-val" id="pvVan"></span></div>
+      <div class="preview-row"><span class="preview-lbl">Tot en met</span><span class="preview-val" id="pvTot"></span></div>
+      <div class="preview-row"><span class="preview-lbl">Werkdagen</span><span class="preview-val" id="pvDagen"></span></div>
+      <div class="preview-row" id="pvToelRow" style="display:none"><span class="preview-lbl">Toelichting</span><span class="preview-val" id="pvToel"></span></div>
+
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="verstuur()" disabled>
+      &#9993; Verstuur aanvraag
+    </button>
+
+  </div>
+
+  <div class="success" id="success">
+    <div class="success-icon">&#9989;</div>
+    <div class="success-title">Mailapp geopend!</div>
+    <div class="success-sub">Je mailapp is geopend met de ingevulde aanvraag. Controleer de mail en verstuur hem. Planning ontvangt je aanvraag zo snel mogelijk.</div>
+    <button class="again-btn" onclick="resetForm()">Nieuwe aanvraag</button>
+  </div>
+
+</div>
+
+<script>
+const NL_M=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+// Logo ophalen uit localStorage (zelfde als in index.html)
+const savedIcon=localStorage.getItem('wlt_icon');
+if(savedIcon){
+  const img=document.createElement('img');
+  img.src=savedIcon;img.alt='WLT';
+  const wrap=document.getElementById('logoWrap');
+  wrap.innerHTML='';wrap.appendChild(img);
+}
+
+// Zet standaard vandaag als begindatum
+const today=new Date();
+const todayStr=today.toISOString().split('T')[0];
+document.getElementById('fVan').value=todayStr;
+document.getElementById('fVan').min=todayStr;
+document.getElementById('fTot').min=todayStr;
+
+// Naam invullen vanuit planning als die bekend is
+const opgeslagenNaam=localStorage.getItem('wlt_emp_naam');
+if(opgeslagenNaam)document.getElementById('fNaam').value=opgeslagenNaam;
+
+document.getElementById('fNaam').addEventListener('input',valideer);
+document.getElementById('fType').addEventListener('change',valideer);
+
+
+function fmtDatum(str){
+  if(!str)return '';
+  const d=new Date(str+'T00:00:00');
+  return d.getDate()+' '+NL_M[d.getMonth()]+' '+d.getFullYear();
+}
+
+function werkdagen(van,tot){
+  let count=0;
+  const d=new Date(van+'T00:00:00');
+  const t=new Date(tot+'T00:00:00');
+  while(d<=t){
+    const dw=d.getDay();
+    if(dw!==0&&dw!==6)count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
+
+function bereken(){
+  const van=document.getElementById('fVan').value;
+  const tot=document.getElementById('fTot').value;
+
+  // Zorg dat tot niet vóór van kan liggen
+  if(van)document.getElementById('fTot').min=van;
+  if(van&&tot&&tot<van){document.getElementById('fTot').value=van;}
+
+  if(van&&tot){
+    const wk=werkdagen(van,tot);
+    document.getElementById('daysNum').textContent=wk;
+    document.getElementById('daysBadge').style.display='inline-flex';
+  } else {
+    document.getElementById('daysBadge').style.display='none';
+  }
+  valideer();
+}
+
+function valideer(){
+  const naam=document.getElementById('fNaam').value.trim();
+  const van=document.getElementById('fVan').value;
+  const tot=document.getElementById('fTot').value;
+  const ok=naam&&van&&tot&&tot>=van;
+  document.getElementById('submitBtn').disabled=!ok;
+
+  if(ok){
+    const wk=werkdagen(van,tot);
+    const toel=document.getElementById('fToel').value.trim();
+    const type=document.getElementById('fType').value;
+    document.getElementById('pvNaam').textContent=naam;
+    document.getElementById('pvType').textContent=type;
+    document.getElementById('pvVan').textContent=fmtDatum(van);
+    document.getElementById('pvTot').textContent=fmtDatum(tot);
+    document.getElementById('pvDagen').textContent=wk+' werkdag'+(wk===1?'':'en');
+    if(toel){
+      document.getElementById('pvToel').textContent=toel;
+      document.getElementById('pvToelRow').style.display='flex';
+    } else {
+      document.getElementById('pvToelRow').style.display='none';
+    }
+
+    document.getElementById('preview').style.display='block';
+  } else {
+    document.getElementById('preview').style.display='none';
+  }
+}
+
+function verstuur(){
+  const naam=document.getElementById('fNaam').value.trim();
+  const type=document.getElementById('fType').value;
+  const van=document.getElementById('fVan').value;
+  const tot=document.getElementById('fTot').value;
+  const toel=document.getElementById('fToel').value.trim();
+  const wk=werkdagen(van,tot);
+
+  localStorage.setItem('wlt_emp_naam',naam);
+
+  const to='planning@wlt.nl;mail@wlt.nl';
+  const periode=van===tot?fmtDatum(van):fmtDatum(van)+' t/m '+fmtDatum(tot);
+  const subj=encodeURIComponent('Verlofaanvraag - '+naam+' - '+periode);
+  const lijn='------------------------------';
+  const regels=[
+    'VERLOFAANVRAAG',
+    lijn,
+    '',
+    'Naam          : '+naam,
+    'Type verlof   : '+type,
+    'Periode       : '+periode,
+    'Aantal dagen  : '+wk+' werkdag'+(wk===1?'':'en'),
+    (toel?'Toelichting   : '+toel:''),
+    'Akkoord manager: _____________________  Datum: ___________',
+    '',
+    lijn,
+    '',
+    'Met vriendelijke groet,',
+    naam
+  ].filter((r,i)=>r!==''||i>5);
+  const body=encodeURIComponent(regels.join('\n'));
+
+  window.location.href='mailto:'+to+'?subject='+subj+'&body='+body;
+
+  setTimeout(()=>{
+    document.getElementById('formCard').style.display='none';
+    document.getElementById('success').style.display='block';
+    window.scrollTo(0,0);
+  },500);
+}
+
+function resetForm(){
+  document.getElementById('formCard').style.display='block';
+  document.getElementById('success').style.display='none';
+  document.getElementById('fVan').value=todayStr;
+  document.getElementById('fTot').value='';
+  document.getElementById('fToel').value='';
+
+  document.getElementById('fType').value='Vakantieverlof';
+  document.getElementById('daysBadge').style.display='none';
+  document.getElementById('preview').style.display='none';
+  document.getElementById('submitBtn').disabled=true;
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
