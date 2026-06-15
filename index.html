@@ -127,6 +127,22 @@ const SNAPSHOT = [{"ordernr":"verlof","klant":"WLT","product":"André Pruijssers
 let PLANNING_EMAIL='planning@wlt.nl';let PE_TEL={};let PE_EMAIL={};let PE_NAAM={};
 
 const TAAK_N={LR:'Lassen RVS',LS:'Lassen Staal',LA:'Lassen Aluminium',OPS:'Opbouwen Staal',OPR:'Opbouwen RVS',MON:'Monteren Buiten',ENG:'Engineering',PNEU:'Pneumatiek bouwen','-':''};
+
+// Dynamische taaknaam op basis van taak + activiteitscode
+function getTaakNaam(taak,code){
+  const t=(taak||'').replace('.','').toUpperCase();
+  const c=(code||'').toUpperCase();
+  if(t==='MON'){
+    if(c==='O') return 'Voorbereiden';
+    return 'Monteren Buiten';
+  }
+  if(t==='OPR'){
+    if(c==='I') return 'Isolateur komt';
+    if(c==='T') return 'Tracer komt';
+    return 'Opbouwen RVS'; // O of X
+  }
+  return TAAK_N[t]||taak;
+}
 const TAAK_K={LR:'#0891b2',LS:'#16a34a',LA:'#7c3aed',OPS:'#ea580c',OPR:'#d97706',MON:'#db2777',ENG:'#6366f1',PNEU:'#64748b'};
 const CODE_N={X:'Snijwerk/Lassen',G:'Grondverf/Spuiten',I:'In elkaar zetten',PR:'Proef/Testen',PS:'PS-montage',O:'Op locatie',V:'Verpakken',L:'Levering',T:'Testen',B:'Verlof','CHECK LEVERING':'Check levering'};
 const CODE_C={X:'cx',G:'cg',I:'ci',PR:'cpr',PS:'cps',O:'co',V:'cv',L:'cl',T:'ct',B:'cb'};
@@ -278,7 +294,7 @@ function actBtns(t,ds){
   const emp=document.getElementById('hdrSub').textContent||'';
   const dd=new Date(ds);
   const dNL=dd.getDate()+' '+NL_M[dd.getMonth()]+' '+dd.getFullYear();
-  const taakNm=TAAK_N[t.taak.replace('.','')]||t.taak;
+  const taakNm=getTaakNaam(t.taak,t.code);
   const projUp=(t.proj||'').toUpperCase().trim();
   // Direct zoeken op PE-code (bijv. 'AB', 'RH')
   const projKey=PE_EMAIL.hasOwnProperty(projUp)?projUp:(Object.keys(PE_EMAIL).find(k=>k===projUp)||'');
@@ -344,7 +360,7 @@ function renderPlan(code){
         if(isV)h+='<div class="verlof">&#127958;&#65039; Verlof / Niet aanwezig</div>';
         tasks.forEach(t=>{
           const cc=CODE_C[t.code]||'cot',tnk=t.taak.replace('.','');
-          const tn=TAAK_N[tnk]||t.taak,tk=TAAK_K[tnk]||'#64748b';
+          const tn=getTaakNaam(t.taak,t.code),tk=TAAK_K[tnk]||'#64748b';
           const dl=t.leverdatum&&dlS(t.leverdatum,d)?'<div class="tdl">&#9888; Leverdatum: '+t.leverdatum+'</div>':'';
           const cKey=ds+'|'+t.ordernr+'|'+t.taak;
           const cPersonen=(collegaMap[cKey]||[]).filter(p=>p.toUpperCase()!==code.toUpperCase());
