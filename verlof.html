@@ -98,6 +98,20 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
     </div>
 
     <div class="field">
+      <label>Aanvraag</label>
+      <div style="display:flex;gap:16px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer">
+          <input type="radio" name="fAanvraag" value="dagen" id="rDagen" checked onchange="toggleAanvraag()" style="width:auto;accent-color:var(--steel)">
+          Hele dag(en)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer">
+          <input type="radio" name="fAanvraag" value="uren" id="rUren" onchange="toggleAanvraag()" style="width:auto;accent-color:var(--steel)">
+          Gedeeltelijke dag (uren)
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
       <label>Type verlof</label>
       <select id="fType">
         <option value="Vakantieverlof">🏖️ Vakantieverlof</option>
@@ -121,6 +135,26 @@ textarea{min-height:90px;resize:vertical;line-height:1.5}
       <div class="days-badge" id="daysBadge" style="display:none">
         <span class="days-num" id="daysNum">0</span>
         <span>werkdagen</span>
+      </div>
+    </div>
+
+    <div class="field" id="urenBlok" style="display:none">
+      <label>Uren verlof</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <input type="number" id="fUren" min="0.5" max="8" step="0.5" placeholder="bijv. 4" oninput="bereken()">
+          <div class="field-hint">Aantal uren (max 8)</div>
+        </div>
+        <div>
+          <select id="fDagdeel">
+            <option value="ochtend">Ochtend</option>
+            <option value="middag">Middag</option>
+            <option value="begin van de dag">Begin van de dag</option>
+            <option value="einde van de dag">Einde van de dag</option>
+            <option value="nader te bepalen">Nader te bepalen</option>
+          </select>
+          <div class="field-hint">Dagdeel</div>
+        </div>
       </div>
     </div>
 
@@ -180,6 +214,21 @@ document.getElementById('fTot').min=todayStr;
 const opgeslagenNaam=localStorage.getItem('wlt_emp_naam');
 if(opgeslagenNaam)document.getElementById('fNaam').value=opgeslagenNaam;
 
+function toggleAanvraag(){
+  const isUren=document.getElementById('rUren').checked;
+  document.getElementById('urenBlok').style.display=isUren?'block':'none';
+  if(isUren){
+    const van=document.getElementById('fVan').value;
+    if(van)document.getElementById('fTot').value=van;
+    document.getElementById('fTot').disabled=true;
+    document.getElementById('fTot').style.opacity='0.5';
+  } else {
+    document.getElementById('fTot').disabled=false;
+    document.getElementById('fTot').style.opacity='1';
+  }
+  bereken();
+}
+
 document.getElementById('fNaam').addEventListener('input',valideer);
 document.getElementById('fType').addEventListener('change',valideer);
 
@@ -210,9 +259,15 @@ function bereken(){
   if(van)document.getElementById('fTot').min=van;
   if(van&&tot&&tot<van){document.getElementById('fTot').value=van;}
 
-  if(van&&tot){
+  const isUren=document.getElementById('rUren').checked;
+  if(isUren&&van){
+    if(!document.getElementById('fTot').value)document.getElementById('fTot').value=van;
+    const uren=parseFloat(document.getElementById('fUren')?.value)||0;
+    document.getElementById('daysBadge').innerHTML='<span class="days-num">'+( uren||'?')+'</span><span>uur</span>';
+    document.getElementById('daysBadge').style.display='inline-flex';
+  } else if(van&&tot){
     const wk=werkdagen(van,tot);
-    document.getElementById('daysNum').textContent=wk;
+    document.getElementById('daysBadge').innerHTML='<span class="days-num">'+wk+'</span><span>werkdagen</span>';
     document.getElementById('daysBadge').style.display='inline-flex';
   } else {
     document.getElementById('daysBadge').style.display='none';
@@ -224,7 +279,9 @@ function valideer(){
   const naam=document.getElementById('fNaam').value.trim();
   const van=document.getElementById('fVan').value;
   const tot=document.getElementById('fTot').value;
-  const ok=naam&&van&&tot&&tot>=van;
+  const isUren2=document.getElementById('rUren').checked;
+  const uren2=isUren2?parseFloat(document.getElementById('fUren')?.value||0):1;
+  const ok=naam&&van&&tot&&tot>=van&&(!isUren2||uren2>0);
   document.getElementById('submitBtn').disabled=!ok;
 
   if(ok){
@@ -235,7 +292,14 @@ function valideer(){
     document.getElementById('pvType').textContent=type;
     document.getElementById('pvVan').textContent=fmtDatum(van);
     document.getElementById('pvTot').textContent=fmtDatum(tot);
-    document.getElementById('pvDagen').textContent=wk+' werkdag'+(wk===1?'':'en');
+    const isUren3=document.getElementById('rUren').checked;
+    if(isUren3){
+      const u=parseFloat(document.getElementById('fUren')?.value||0);
+      const dd=document.getElementById('fDagdeel').value;
+      document.getElementById('pvDagen').textContent=u+' uur ('+dd+')';
+    } else {
+      document.getElementById('pvDagen').textContent=wk+' werkdag'+(wk===1?'':'en');
+    }
     if(toel){
       document.getElementById('pvToel').textContent=toel;
       document.getElementById('pvToelRow').style.display='flex';
@@ -255,7 +319,10 @@ function verstuur(){
   const van=document.getElementById('fVan').value;
   const tot=document.getElementById('fTot').value;
   const toel=document.getElementById('fToel').value.trim();
+  const isUren4=document.getElementById('rUren').checked;
   const wk=werkdagen(van,tot);
+  const furen=isUren4?parseFloat(document.getElementById('fUren')?.value||0):0;
+  const fdagdeel=isUren4?document.getElementById('fDagdeel').value:'';
 
   localStorage.setItem('wlt_emp_naam',naam);
 
@@ -299,6 +366,11 @@ function resetForm(){
   document.getElementById('fToel').value='';
 
   document.getElementById('fType').value='Vakantieverlof';
+  document.getElementById('rDagen').checked=true;
+  document.getElementById('urenBlok').style.display='none';
+  document.getElementById('fTot').disabled=false;
+  document.getElementById('fTot').style.opacity='1';
+  if(document.getElementById('fUren'))document.getElementById('fUren').value='';
   document.getElementById('daysBadge').style.display='none';
   document.getElementById('preview').style.display='none';
   document.getElementById('submitBtn').disabled=true;
