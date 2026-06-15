@@ -100,6 +100,8 @@ thead th.emp-h{left:0;z-index:60;min-width:270px;text-align:left;padding:10px 16
 .ord-meta{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ord-lev{font-size:10px;font-weight:600;margin-top:2px;color:var(--muted)}
 .ord-lev.soon{color:#dc2626}
+.ord-lev.late{color:#7c2d12;background:#fef3c7;border-radius:4px;padding:1px 5px}
+.ord-lastday{font-size:10px;color:var(--muted);margin-top:1px}
 tr:hover .emp-cell{background:#f6f8fb}
 
 /* day cells */
@@ -157,6 +159,7 @@ table{table-layout:fixed}
     </div>
   </div>
   <div class="topbar-right">
+    <a href="verlof.html" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;color:#fff;text-decoration:none;white-space:nowrap">&#128197; Verlof aanvragen</a>
     <div class="clock" id="clock"></div>
     <div class="sync-chip" onclick="loadData()" title="Klik om te vernieuwen">
       <div><span class="sdot" id="sdot"></span><span id="sstat">laden…</span></div>
@@ -214,6 +217,36 @@ const WORKER_URL='https://wlt-planning.renehanenberg.workers.dev';
 
 const TAAK_N={LR:'Lassen RVS',LS:'Lassen Staal',LA:'Lassen Aluminium',OPS:'Opbouwen Staal',OPR:'Opbouwen RVS',MON:'Monteren Buiten',ENG:'Engineering',PNEU:'Pneumatiek bouwen','-':''};
 const TAAK_C={LR:'var(--lr)',LS:'var(--ls)',LA:'var(--la)',OPS:'var(--ops)',OPR:'var(--opr)',MON:'var(--mon)',ENG:'var(--eng)',PNEU:'var(--pneu)'};
+
+function getTaakNaam(taak,code){
+  const t=(taak||'').replace('.','').toUpperCase();
+  const c=(code||'').toUpperCase();
+  if(t==='MON'){
+    if(c==='O') return 'Voorbereiden';
+    return 'Monteren Buiten';
+  }
+  if(t==='OPR'){
+    if(c==='I') return 'Isolateur komt';
+    if(c==='T') return 'Tracer komt';
+    return 'Opbouwen RVS';
+  }
+  if(t==='ENG'){
+    if(c==='X')  return 'Engineering';
+    if(c==='I')  return 'Inkoop';
+    if(c==='IS') return 'Isoleren';
+    if(c==='T')  return 'Tracen';
+    if(c==='PR') return 'Productie RVS';
+    if(c==='PS') return 'Productie Staal';
+    if(c==='PA') return 'Productie Aluminium';
+    if(c==='G')  return 'Goedkeuring klant';
+    if(c==='L')  return 'Leverdatum';
+    if(c==='S')  return 'Schilderen';
+    if(c==='V')  return 'Verzinken';
+    return 'Engineering';
+  }
+  const TAAK_N={LR:'Lassen RVS',LS:'Lassen Staal',LA:'Lassen Aluminium',OPS:'Opbouwen Staal',OPR:'Opbouwen RVS',MON:'Monteren Buiten',ENG:'Engineering',PNEU:'Pneumatiek bouwen'};
+  return TAAK_N[t]||taak;
+}
 const NL_D=['zo','ma','di','wo','do','vr','za'];
 const NL_M=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 
@@ -477,17 +510,20 @@ function render(){
     acts.forEach(a=>{
       const idxs=Object.keys(a.planning).filter(d=>dayKeys.includes(d)).map(d=>dayKeys.indexOf(d)).sort((x,y)=>x-y);
       if(!idxs.length)return;
-      let start=idxs[0],prev=idxs[0];
+      let start=idxs[0],prev=idxs[0],prevCode=a.planning[dayKeys[idxs[0]]];
       for(let i=1;i<=idxs.length;i++){
         const cur=idxs[i];
+        const curCode=cur!==undefined?a.planning[dayKeys[cur]]:'';
         let bridge=false;
         if(cur!==undefined&&cur>prev+1){
           bridge=true;
           for(let g=prev+1;g<cur;g++){const dw=days[g].getDay();if(dw!==0&&dw!==6){bridge=false;break;}}
         }
-        if(cur!==undefined&&(cur===prev+1||bridge)){prev=cur;continue;}
-        segs.push({start,end:prev,act:a});
-        if(cur!==undefined){start=cur;prev=cur;}
+        // Splits segment als code verandert of als er een werkdag-gat is
+        const codeChanged=curCode&&curCode!==prevCode;
+        if(cur!==undefined&&(cur===prev+1||bridge)&&!codeChanged){prev=cur;continue;}
+        segs.push({start,end:prev,act:a,code:prevCode});
+        if(cur!==undefined){start=cur;prev=cur;prevCode=curCode;}
       }
     });
     return segs.sort((a,b)=>a.start-b.start||b.end-a.end);
@@ -507,17 +543,36 @@ function render(){
     const nLanes=Math.max(lanes.length,1);
     const rowH=Math.max(54,nLanes*25+10);
 
+    // Laatste activiteitsdag van dit order
+    let lastActDay='';
+    o.acts.forEach(a=>{
+      Object.keys(a.planning).forEach(d=>{
+        if(!lastActDay||d>lastActDay)lastActDay=d;
+      });
+    });
+
     let levHtml='';
+    let lastDayHtml='';
+    if(lastActDay){
+      const lad=new Date(lastActDay);
+      lastDayHtml='<div class="ord-lastday">Laatste dag: '+lad.getDate()+' '+NL_M[lad.getMonth()]+'</div>';
+    }
     if(o.leverdatum){
       const ld=new Date(o.leverdatum);
       const soon=ld>=today&&ld<=lev7;
-      levHtml='<div class="ord-lev'+(soon?' soon':'')+'">'+(soon?'&#9888; ':'')+'Levering: '+ld.getDate()+' '+NL_M[ld.getMonth()]+'</div>';
+      // Late: activiteit loopt door na leverdatum
+      const late=lastActDay&&lastActDay>o.leverdatum;
+      if(late){
+        levHtml='<div class="ord-lev late">&#9888; Na levering: '+ld.getDate()+' '+NL_M[ld.getMonth()]+'</div>';
+      } else {
+        levHtml='<div class="ord-lev'+(soon?' soon':'')+'">'+(soon?'&#9888; ':'')+'Levering: '+ld.getDate()+' '+NL_M[ld.getMonth()]+'</div>';
+      }
     }
     h+='<tr><td class="emp-cell" onclick="openPanel(\''+oEsc+'\')" style="cursor:pointer;height:'+rowH+'px" title="Klik voor details">'+
       '<div style="display:flex;align-items:baseline;gap:8px;min-width:0"><span class="ord-nr">'+o.ordernr+'</span>'+
       '<span style="font-family:\'Barlow Condensed\';font-size:15px;font-weight:600;letter-spacing:.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+o.klant+'</span></div>'+
       '<div class="ord-prod">'+o.product+'</div>'+
-      '<div class="ord-meta">'+(o.proj&&o.proj!=='-'?'PE: '+o.proj:'')+'</div>'+levHtml+'</td>';
+      '<div class="ord-meta">'+(o.proj&&o.proj!=='-'?'PE: '+o.proj:'')+'</div>'+levHtml+lastDayHtml+'</td>';
 
     // één doorlopende cel met achtergrond + balken
     h+='<td class="lane-td" colspan="'+N+'" style="height:'+rowH+'px">';
@@ -534,9 +589,9 @@ function render(){
       const width=(s.end-s.start+1)*COLW-5;
       const top=5+s.lane*25;
       const span=s.end-s.start+1;
-      const label=span>=3?(TAAK_N[a.taak]||a.taak)+' · '+a.pers:a.taak+'·'+a.pers;
+      const label=span>=3?getTaakNaam(a.taak,s.code||'')+' · '+a.pers:(getTaakNaam(a.taak,s.code||'')||a.taak)+'·'+a.pers;
       h+='<div class="bar" style="background:'+col+';left:'+left+'px;width:'+width+'px;top:'+top+'px" '+
-        'onmousemove="showTip(event,\''+esc(a.taak)+'\',\''+esc(TAAK_N[a.taak]||a.taak)+'\',\''+esc(naam)+'\',\''+esc(a.pers)+'\',\''+esc(o.ordernr)+'\',\''+(o.leverdatum||'')+'\')" '+
+        'onmousemove="showTip(event,\''+esc(a.taak)+'\',\''+esc(getTaakNaam(a.taak,s.code||''))+'\',\''+esc(naam)+'\',\''+esc(a.pers)+'\',\''+esc(o.ordernr)+'\',\''+(o.leverdatum||'')+'\')" '+
         'onmouseleave="hideTip()" onclick="openPanel(\''+oEsc+'\')">'+label+'</div>';
     });
     h+='</td></tr>';
@@ -577,31 +632,103 @@ function openPanel(ordernr){
   let pe=acts.find(a=>a.proj&&a.proj!=='-')?.proj||'';
   document.getElementById('pSub').textContent=o.product+' — '+o.klant+(pe?' · PE: '+pe:'')+(lev?' · Levering: '+lev:'');
 
-  const days=getDays().map(fmt);
+  const allDays=getDays().map(fmt);
+  const NL_M2=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+  function fmtD(d){const dd=new Date(d);return dd.getDate()+' '+NL_M2[dd.getMonth()];}
+
+  // Bouw segmenten per activiteit: splits bij codewissel
+  function buildPanelSegs(a){
+    const dates=Object.keys(a.planning).sort();
+    if(!dates.length)return[];
+    // Stap 1: bouw segmenten per aaneengesloten periode met dezelfde code
+    // Weekenden worden overbrugd, maar werkdag-gaten splitsen
+    const segs=[];
+    let start=dates[0],prev=dates[0],prevCode=a.planning[dates[0]];
+    for(let i=1;i<=dates.length;i++){
+      const cur=dates[i];
+      const curCode=cur?a.planning[cur]:'';
+      let onlyWeekend=false;
+      if(cur){
+        const pd=new Date(prev),cd=new Date(cur);
+        const diff=(cd-pd)/864e5;
+        if(diff>1){
+          onlyWeekend=true;
+          const tmp=new Date(pd);tmp.setDate(tmp.getDate()+1);
+          while(tmp<cd){if(tmp.getDay()!==0&&tmp.getDay()!==6){onlyWeekend=false;break;}tmp.setDate(tmp.getDate()+1);}
+        }
+      }
+      const codeChanged=curCode&&curCode!==prevCode;
+      if(cur&&(cur===prev||onlyWeekend||new Date(cur)-new Date(prev)===864e5)&&!codeChanged){prev=cur;continue;}
+      segs.push({start,end:prev,code:prevCode});
+      if(cur){start=cur;prev=cur;prevCode=curCode;}
+    }
+    // Stap 2: samenvoegen van segmenten met dezelfde code die alleen door werkdaggaten gescheiden zijn
+    // (bijv. twee weken dezelfde activiteit met een gat ertussen -> toon als één periode)
+    const merged=[];
+    segs.forEach(s=>{
+      const last=merged[merged.length-1];
+      if(last&&last.code===s.code){
+        // Controleer of er alleen vrije/weekend dagen tussen zitten (geen andere activiteit)
+        const allDatesSet=new Set(dates);
+        const pd=new Date(last.end),cd=new Date(s.start);
+        let onlyFree=true;
+        const tmp=new Date(pd);tmp.setDate(tmp.getDate()+1);
+        while(tmp<cd){
+          const ds=tmp.toISOString().split('T')[0];
+          if(tmp.getDay()!==0&&tmp.getDay()!==6&&allDatesSet.has(ds)&&a.planning[ds]!==s.code){onlyFree=false;break;}
+          tmp.setDate(tmp.getDate()+1);
+        }
+        if(onlyFree){last.end=s.end;return;}
+      }
+      merged.push({...s});
+    });
+    return merged;
+  }
+
+  const TAAK_C2={LR:'var(--lr)',LS:'var(--ls)',LA:'var(--la)',OPS:'var(--ops)',OPR:'var(--opr)',MON:'var(--mon)',ENG:'var(--eng)',PNEU:'var(--pneu)'};
+
   let html='';
-  const sorted=[...acts].sort((a,b)=>{
+  const sorted=[...acts].filter(a=>Object.keys(a.planning).length>0).sort((a,b)=>{
     const aMin=Object.keys(a.planning).sort()[0]||'9999';
     const bMin=Object.keys(b.planning).sort()[0]||'9999';
     return aMin.localeCompare(bMin);
   });
 
   sorted.forEach(a=>{
-    const col=TAAK_C[a.taak]||'#64748b';
+    const col=TAAK_C2[a.taak.replace('.','').toUpperCase()]||'#64748b';
     const naam=naamMap[a.pers.toUpperCase()]||a.pers;
-    const allDates=Object.keys(a.planning).sort();
-    const dateStr=allDates.map(d=>{
-      const dd=new Date(d);
-      const inView=days.includes(d);
-      const s=dd.getDate()+' '+NL_M[dd.getMonth()];
-      return inView?s:'<span style="opacity:.45">'+s+'</span>';
-    }).join(', ');
-    html+='<div class="p-order" style="border-left-color:'+col+'">'+
-      '<div class="p-ord-top"><span class="p-badge" style="background:'+col+'">'+(TAAK_N[a.taak]||a.taak)+'</span>'+
-      '<span style="font-size:13px;font-weight:600">'+naam+'</span>'+
-      '<span style="font-size:10px;color:var(--muted)">'+a.pers+'</span></div>'+
-      (allDates.length?'<div class="p-days">&#128197; '+dateStr+'</div>':'<div class="p-days" style="color:var(--muted)">Nog niet ingepland</div>')+
-      '</div>';
+    const segs=buildPanelSegs(a);
+
+    segs.forEach(s=>{
+      const taakNm=getTaakNaam(a.taak,s.code||'');
+      const sd=new Date(s.start),ed=new Date(s.end);
+      const diffWk=Math.round((ed-sd)/864e5/7);
+      const periode=s.start===s.end
+        ?fmtD(s.start)
+        :fmtD(s.start)+' – '+fmtD(s.end)+(diffWk>=1?' ('+Math.ceil((ed-sd)/864e5/5)+' wkd)':'');
+      const inView=allDays.includes(s.start)||allDays.includes(s.end);
+      html+='<div class="p-order" style="border-left-color:'+col+'">'+
+        '<div class="p-ord-top">'+
+        '<span class="p-badge" style="background:'+col+'">'+taakNm+'</span>'+
+        '<span style="font-size:13px;font-weight:600">'+naam+'</span>'+
+        '<span style="font-size:10px;color:var(--muted)">'+a.pers+'</span></div>'+
+        '<div class="p-days" style="'+(inView?'':'opacity:.45')+'">&#128197; '+periode+'</div>'+
+        '</div>';
+    });
   });
+
+  // Verlof in periode
+  const vDates=[];
+  acts.filter(a=>a.ordernr==='verlof').forEach(a=>Object.keys(a.planning).forEach(d=>{if(allDays.includes(d))vDates.push(d);}));
+  if(vDates.length){
+    const vStr=[...new Set(vDates)].sort().map(fmtD).join(', ');
+    html+='<div class="p-order" style="border-left-color:var(--verlof)">'+
+      '<div class="p-ord-top"><span class="p-badge" style="background:var(--verlof)">Verlof</span></div>'+
+      '<div class="p-days">&#127958;&#65039; '+vStr+'</div></div>';
+  }
+
+  if(!html)html='<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Geen geplande activiteiten gevonden.</div>';
 
   document.getElementById('pBody').innerHTML=html;
   document.getElementById('panel').classList.add('open');
