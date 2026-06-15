@@ -302,7 +302,8 @@ function actBtns(t,ds){
   const peNaam=projKey?PE_NAAM[projKey]:(t.proj||'');
   const peTel=projKey?PE_TEL[projKey]:'';
   const subj=encodeURIComponent(t.ordernr+' - '+t.klant+' - '+taakNm+' - '+emp);
-  const to=PLANNING_EMAIL+(peEmail?';'+peEmail:'');
+  const to=PLANNING_EMAIL;
+  const cc=peEmail||'';
   const body=encodeURIComponent(
     'Beste '+(peNaam?peNaam+' en ':'')+'planning,\n\n'+
     'De volgende activiteit is gereed:\n\n'+
@@ -314,7 +315,7 @@ function actBtns(t,ds){
     'Gepland op: '+dNL+
     '\n\nMet vriendelijke groet,\n'+emp);
   let h='<div class="act-btns">';
-  h+='<a class="abtn abtn-done" href="mailto:'+to+'?subject='+subj+'&body='+body+'">&#10003; Gereed melden</a>';
+  h+='<a class="abtn abtn-done" href="mailto:'+to+(cc?'?cc='+cc+'&':'?')+'subject='+subj+'&body='+body+'">&#10003; Gereed melden</a>';
   if(peTel)h+='<a class="abtn abtn-call" href="tel:'+peTel+'">&#128222; Bel PE</a>';
   h+='</div>';
   return h;

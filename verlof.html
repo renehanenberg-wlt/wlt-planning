@@ -259,7 +259,8 @@ function verstuur(){
 
   localStorage.setItem('wlt_emp_naam',naam);
 
-  const to='planning@wlt.nl;mail@wlt.nl';
+  const to='planning@wlt.nl';
+  const cc='mail@wlt.nl';
   const periode=van===tot?fmtDatum(van):fmtDatum(van)+' t/m '+fmtDatum(tot);
   const subj=encodeURIComponent('Verlofaanvraag - '+naam+' - '+periode);
   const lijn='------------------------------';
@@ -281,7 +282,7 @@ function verstuur(){
   ].filter((r,i)=>r!==''||i>5);
   const body=encodeURIComponent(regels.join('\n'));
 
-  window.location.href='mailto:'+to+'?subject='+subj+'&body='+body;
+  window.location.href='mailto:'+to+'?cc='+cc+'&subject='+subj+'&body='+body;
 
   setTimeout(()=>{
     document.getElementById('formCard').style.display='none';
