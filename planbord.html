@@ -182,12 +182,25 @@ table{table-layout:fixed}
     <input class="search" id="fZoek" placeholder="Zoek order, klant of product…" oninput="render()">
   </div>
   <button class="clear-btn" onclick="clearFilters()">Wis filters</button>
+  <div class="f-group">
+    <span class="f-lbl">Sortering</span>
+    <select id="fSort" onchange="render()">
+      <option value="lev">Leverdatum</option>
+      <option value="order">Ordernummer</option>
+      <option value="klant">Klantnaam</option>
+      <option value="first">Eerste activiteit</option>
+      <option value="last">Laatste activiteit</option>
+    </select>
+  </div>
   <div class="f-spacer"></div>
   <div class="weekbtns" id="wkBtns">
     <button data-w="2" onclick="setWeeks(2)">2 wk</button>
-    <button data-w="3" class="act" onclick="setWeeks(3)">3 wk</button>
-    <button data-w="4" onclick="setWeeks(4)">4 wk</button>
+    <button data-w="3" onclick="setWeeks(3)">3 wk</button>
+    <button data-w="4" class="act" onclick="setWeeks(4)">4 wk</button>
     <button data-w="6" onclick="setWeeks(6)">6 wk</button>
+    <button data-w="8" onclick="setWeeks(8)">8 wk</button>
+    <button data-w="12" onclick="setWeeks(12)">12 wk</button>
+    <button data-w="26" onclick="setWeeks(26)">26 wk</button>
   </div>
 </div>
 
@@ -250,7 +263,7 @@ function getTaakNaam(taak,code){
 const NL_D=['zo','ma','di','wo','do','vr','za'];
 const NL_M=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 
-let DATA=[],weeks=3;
+let DATA=[],weeks=4;
 let today=new Date();today.setHours(0,0,0,0);
 
 /* ── clock ── */
@@ -383,6 +396,7 @@ function toggleTaak(t){
 function clearFilters(){
   document.getElementById('fPE').value='';
   document.getElementById('fZoek').value='';
+  document.getElementById('fSort').value='lev';
   Object.keys(taakState).forEach(t=>taakState[t]=true);
   const taken=[...new Set(DATA.filter(r=>r.taak&&r.taak!=='-'&&r.ordernr!=='verlof').map(r=>r.taak))].sort();
   renderChips(taken);
@@ -436,7 +450,7 @@ function render(){
     if(fPE&&r.proj!==fPE)return false;
     if(r.taak&&taakState[r.taak]===false)return false;
     if(fZoek&&!(r.ordernr.toLowerCase().includes(fZoek)||r.klant.toLowerCase().includes(fZoek)||r.product.toLowerCase().includes(fZoek)))return false;
-    return Object.keys(r.planning).some(d=>dayKeys.includes(d));
+    return true; // toon altijd alle orders, ook zonder activiteiten in huidige periode
   });
 
   // groepeer per order
@@ -451,11 +465,27 @@ function render(){
 
   const orders=Object.values(ordMap).map(o=>{
     let first='9999';
+    // Eerste activiteit in huidige periode
     o.acts.forEach(a=>Object.keys(a.planning).forEach(d=>{if(dayKeys.includes(d)&&d<first)first=d;}));
+    // Als geen activiteit in periode: gebruik eerste geplande dag überhaupt
+    if(first==='9999'){
+      o.acts.forEach(a=>Object.keys(a.planning).forEach(d=>{if(d<first)first=d;}));
+    }
     return {...o,first};
   }).sort((a,b)=>{
-    const al=a.leverdatum||'9999', bl=b.leverdatum||'9999';
-    return al===bl ? a.first.localeCompare(b.first) : al.localeCompare(bl);
+    const sort=document.getElementById('fSort')?.value||'lev';
+    if(sort==='order') return a.ordernr.localeCompare(b.ordernr,undefined,{numeric:true});
+    if(sort==='klant') return a.klant.localeCompare(b.klant);
+    if(sort==='first') return a.first.localeCompare(b.first);
+    if(sort==='last'){
+      let al='',bl='';
+      a.acts.forEach(r=>Object.keys(r.planning).forEach(d=>{if(d>al)al=d;}));
+      b.acts.forEach(r=>Object.keys(r.planning).forEach(d=>{if(d>bl)bl=d;}));
+      return al.localeCompare(bl);
+    }
+    // standaard: leverdatum
+    const al=a.leverdatum||'9999',bl=b.leverdatum||'9999';
+    return al===bl?a.first.localeCompare(b.first):al.localeCompare(bl);
   });
 
   // ── KPI's ──
